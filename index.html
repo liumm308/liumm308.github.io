@@ -164,6 +164,162 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-test" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/07/26/test/">ceph的部署</a>
+    </h1>
+  
+
+        
+        <a href="/2018/07/26/test/" class="archive-article-date">
+  	<time datetime="2018-07-26T03:11:07.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-07-26</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="环境来到ceph的世界"><a href="#环境来到ceph的世界" class="headerlink" title="  环境来到ceph的世界  "></a><center>  环境来到ceph的世界  </center></h3><h4 id="1-ceph的坏境"><a href="#1-ceph的坏境" class="headerlink" title="1.ceph的坏境"></a>1.ceph的坏境</h4><ul>
+<li><p>硬件资源</p>
+<blockquote>
+<p>3台主机，14核251G内存，Centos7系统。每台挂载4块745.2G 的SSD 和4块1.8T 的SATA盘。<br>三台主机内网物理IP分别为: 192.168.0.100, 192.168.0.101, 192.168.0.102。<br>Linux内核版本：3.10.0-327.el7.x86_64</p>
+</blockquote>
+</li>
+<li><p>磁盘分区</p>
+<blockquote>
+<p>用于ceph对象存储的磁盘分区应当实现物理隔离。ceph-mon可以和osd节点混布，但要物理隔离。单台机器可以由多个osd进程，osd会把磁盘分成data和journal两部分，Journal部分是ceph写数据性能的关键影响因素。为了高性能，建议journal放在在ssd盘，分区大小10G即可(更精确的大小计算参见这里, 大致的计算原则是 磁盘的吞吐osd持久化间隔的两倍，默认的持久化间隔是5s，按照磁盘吞吐200M计算，2G空间就够了)。三台主机上分别建立8个osd存储 。</p>
+</blockquote>
+</li>
+<li><p>设置ssh免密登录仅主控节点</p>
+<blockquote>
+<p>选定一个节点作为主控节点（这里选的ceph1主机），建立从主控节点到其他节点的免密登录，以实现ceph集群的快速安装。<br>（注：主控节点也可以安装ceph）</p>
+</blockquote>
+<ul>
+<li><p>修改 /etc/hosts文件<br> 要在集群主机上设置ssh免密码服务，在管理主机上打开命令行并执行下列命令：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/hosts</span></span><br><span class="line"><span class="comment"># cat /etc/hosts</span></span><br><span class="line">  192.168.0.100  ceph1</span><br><span class="line">  192.168.0.101  ceph2</span><br><span class="line">  192.168.0.102  ceph3</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>生成秘钥：ssh-keygen<br>在管理主机上(ceph1)执行下列命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ssh-keygen</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>生成秘钥：ssh-keygen<br>在管理主机上(ceph1)，执行下列命令，实现复制访问密钥到各个节点：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ssh-copy-id root@HOSTNAME</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ssh-copy-id root@ceph1</span></span><br><span class="line"><span class="comment"># ssh-copy-id root@ceph2</span></span><br><span class="line"><span class="comment"># ssh-copy-id root@ceph3</span></span><br></pre></td></tr></table></figure>
+<p> 执行下列命令验证ssh功能：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ssh root@ HOSTNAME</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ssh root@ceph1</span></span><br><span class="line"><span class="comment"># ssh root@ceph2</span></span><br><span class="line"><span class="comment"># ssh root@ceph3</span></span><br></pre></td></tr></table></figure>
+<p> 如果ssh功能正常，即可登录到相应的节点。若不能完成免密码登录，请检查上述过程。</p>
+</li>
+</ul>
+</li>
+<li><p>防火墙及安全设置所有节点</p>
+<blockquote>
+<p>为保证ceph集群的顺利安装，在安装ceph集群前，请确保已关闭selinux，在各个节点上，执行下列命令。设置selinux时如果报命令不存在，可以忽略这一步。</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># systemctl stop firewalld.service</span></span><br><span class="line"><span class="comment"># systemctl disable firewalld.service</span></span><br><span class="line"><span class="comment"># firewall-cmd --state</span></span><br><span class="line"><span class="comment"># sed -i '/^SELINUX=.*/c SELINUX=disabled' /etc/selinux/config</span></span><br><span class="line"><span class="comment"># sed -i 's/^SELINUXTYPE=.*/SELINUXTYPE=disabled/g' /etc/selinux/config</span></span><br><span class="line"><span class="comment"># grep --color=auto '^SELINUX' /etc/selinux/config</span></span><br><span class="line"><span class="comment"># setenforce 0</span></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="2-ceph的安装"><a href="#2-ceph的安装" class="headerlink" title="2.ceph的安装"></a>2.ceph的安装</h4><ul>
+<li><p>安装ceph的源</p>
+<blockquote>
+<p>ceph源默认是国外的，由于网络问题，国内的可能更快一些，这里添加alibaba的yum.</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># rm -f /etc/yum.repos.d/*</span></span><br><span class="line"><span class="comment"># wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo</span></span><br><span class="line"><span class="comment"># wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo</span></span><br><span class="line"><span class="comment"># sed -i '/aliyuncs.com/d' /etc/yum.repos.d/*.repo</span></span><br></pre></td></tr></table></figure>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/yum.repos.d/ceph.repo</span></span><br><span class="line"><span class="comment"># cat /etc/yum.repos.d/ceph.repo</span></span><br><span class="line">[ceph]</span><br><span class="line">name=ceph</span><br><span class="line">baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/x86_64/</span><br><span class="line">gpgcheck=0</span><br><span class="line">[ceph-noarch]</span><br><span class="line">name=cephnoarch</span><br><span class="line">baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/noarch/</span><br><span class="line">gpgcheck=0</span><br><span class="line">[ceph-source]</span><br><span class="line">name=ceph-source</span><br><span class="line">baseurl=http://mirrors.aliyun.com/ceph/rpm-luminous/el7/SRPMS/</span><br><span class="line">gpgcheck=0</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>更新yum源</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum clean all &amp;&amp; yum makecache</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装ceph-deploy</p>
+<blockquote>
+<p>ceph-deploy是ceph自动化部署的工具之一。一般情况下，在管理主机上部署ceph-deploy工具。在管理主机上新建my-cluster文件夹，并在该路径下进行ceph的部署工作。更新软件库并安装 ceph-deploy ：</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># mkdir my-cluster</span></span><br><span class="line"><span class="comment"># cd my-cluster</span></span><br><span class="line"><span class="comment"># yum update</span></span><br><span class="line"><span class="comment"># yum install ceph-deploy</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装ntp服务（所有节点）</p>
+<blockquote>
+<p>主要是用于ceph-mon之间的时间同步。在所有 Ceph 节点上安装 NTP 服务（特别是 Ceph Monitor 节点），以免因时钟漂移导致故障。确保在各 Ceph 节点上启动了 NTP 服务，并且要使用同一个 NTP 服务器。命令如下：</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># yum install chrony</span></span><br></pre></td></tr></table></figure>
+<p> ceph1节点</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/chrony.conf</span></span><br><span class="line"><span class="comment"># cat /etc/chrony.conf</span></span><br><span class="line">...</span><br><span class="line">server NTP_SERVER iburst</span><br><span class="line">...</span><br><span class="line">allow 192.168.0.0/24</span><br><span class="line"></span><br><span class="line"><span class="comment"># systemctl enable chronyd.service</span></span><br><span class="line"><span class="comment"># systemctl start chronyd.service</span></span><br></pre></td></tr></table></figure>
+<p> 其他节点（ceph2,ceph3）：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># vim /etc/chrony.conf</span></span><br><span class="line"><span class="comment"># cat /etc/chrony.conf</span></span><br><span class="line">...</span><br><span class="line">server ceph1 iburst</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="comment"># systemctl enable chronyd.service</span></span><br><span class="line"><span class="comment"># systemctl start chronyd.service</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装ceph（所有节点）</p>
+<blockquote>
+<p>在管理节点上，进入my-cluster放置配置文件的目录，用 ceph-deploy 执行如下步骤。<br> 创建集群：</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd my-cluster</span></span><br><span class="line"><span class="comment"># ceph-deploy new ceph1</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>此时会在my-cluster目录下生成几个文件，如：ceph.conf  ceph-deploy-ceph.log  ceph.mon.keyring  release.asc文件。上述文件分别是一个 Ceph 配置文件、一个 monitor 密钥环和一个日志文件。设置ceph.conf文件，增加一行内容public network = xxx.xxx.xxx.0/24。<br>（注： xxx.xxx.xxx取决于实际的网络，可通过ifconfig查看并配置）<br>对各个节点进行ceph安装，管理节点执行命令如下：</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy install ceph1 ceph2 ceph3</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>上述命令利用ceph-deploy工具，自动在输入节点上安装ceph。在安装过程中如果遇到了问题，想重新开始安装，执行以下命令来清空配置。</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy purge ceph1 ceph2 ceph3</span></span><br><span class="line"><span class="comment"># ceph-deploy forgetkeys</span></span><br><span class="line"><span class="comment"># ceph-deploy purgedata ceph1 ceph2 ceph3</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>如果成功安装ceph。执行ceph -v查看版本信息如下：</p>
+</blockquote>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph -v</span></span><br><span class="line">12.0.1</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h5 id="后续更新ceph配置"><a href="#后续更新ceph配置" class="headerlink" title="后续更新ceph配置"></a>后续更新ceph配置</h5>
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">技术文档</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/07/26/test/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-firstfile" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -185,7 +341,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>前言</p>
-<p>这是一个通向世界的小窗，一侧是天空，一侧的好奇的眸。。。</p>
+<p>这是一个通向世界的小窗，一侧是天空，一侧是好奇的眸。。。</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># echo "hello bash"</span></span><br></pre></td></tr></table></figure>
 
       
@@ -412,6 +568,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">第一条blog</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color5">技术文档</a>
               </li>
             
             <div class="clearfix"></div>
