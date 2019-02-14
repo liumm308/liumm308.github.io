@@ -164,6 +164,113 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-ceph" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2018/07/30/ceph/">ceph的部署（下）</a>
+    </h1>
+  
+
+        
+        <a href="/2018/07/30/ceph/" class="archive-article-date">
+  	<time datetime="2018-07-30T13:24:26.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2018-07-30</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="欢迎来到ceph的世界"><a href="#欢迎来到ceph的世界" class="headerlink" title="  欢迎来到ceph的世界  "></a><center>  欢迎来到ceph的世界  </center></h3><p>续<a href="https://liumm308.github.io/2018/07/26/test/" target="_blank" rel="noopener">ceph的部署（上）</a></p>
+<h4 id="3-ceph的配置"><a href="#3-ceph的配置" class="headerlink" title="3.ceph的配置"></a>3.ceph的配置</h4><ul>
+<li><p>配置ceph-mon</p>
+<blockquote>
+<p>管理节点执行下列命令，配置初始 monitor(s)、并收集所有密钥：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># cd /root/my-cluster</span></span><br><span class="line"><span class="comment"># ceph-deploy mon create-initial</span></span><br><span class="line"><span class="comment"># ls</span></span><br><span class="line">ceph1.client.admin.keyring, ceph1.bootstrap-osd.keyring, ceph1.bootstrap-mds.keyring, ceph1.bootstrap-rgw.keyring</span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+<li><p>配置osd</p>
+<blockquote>
+<p>以物理盘dev/sda, dev/sdb, dev/sdc和nvme0n1为例。添加9个 OSD ，在管理节点上执行磁盘准备操作，命令如下：</p>
+  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd prepare ceph1:/dev/sda:/dev/nvme0n1p1 ceph1:/dev/sdb: /dev/nvme0n1p2 ceph1:/dev/sdc:/dev/nvme0n1p3</span></span><br><span class="line"><span class="comment"># ceph-deploy osd prepare ceph2:/dev/sda:/dev/nvme0n1p1 ceph2:/dev/sdb: /dev/nvme0n1p2 ceph2:/dev/sdc:/dev/nvme0n1p3</span></span><br><span class="line"><span class="comment"># ceph-deploy osd prepare ceph3:/dev/sda:/dev/nvme0n1p1 ceph3:/dev/sdb: /dev/nvme0n1p2 ceph3:/dev/sdc:/dev/nvme0n1p3</span></span><br></pre></td></tr></table></figure>
+</blockquote>
+<p>  （注：nvme0n1是dev下的一块SSD盘。 nvme0n1p1，nvme0n1p2，nvme0n1p3是nvme0n1的三个分区）</p>
+<ul>
+<li><p>设置ceph执行权限:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># chown ceph: ceph /dev/sda /dev/sdb /dev/sdc /dev/nvme0n1</span></span><br><span class="line"><span class="comment"># ssh ceph2</span></span><br><span class="line"><span class="comment"># chown ceph: ceph /dev/sda /dev/sdb /dev/sdc /dev/nvme0n1</span></span><br><span class="line"><span class="comment"># ssh ceph3</span></span><br><span class="line"><span class="comment"># chown ceph: ceph /dev/sda /dev/sdb /dev/sdc /dev/nvme0n1</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>启动osd<br>管理主机ceph1命令行执行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ceph-deploy osd activate ceph1:/dev/sda:/dev/nvme0n1p1 ceph1:/dev/sdb: /dev/nvme0n1p2 ceph1:/dev/sdc:/dev/nvme0n1p3</span></span><br><span class="line"><span class="comment"># ceph-deploy osd activate ceph2:/dev/sda:/dev/nvme0n1p1 ceph2:/dev/sdb: /dev/nvme0n1p2 ceph2:/dev/sdc:/dev/nvme0n1p3</span></span><br><span class="line"><span class="comment"># ceph-deploy osd activate ceph3:/dev/sda:/dev/nvme0n1p1 ceph3:/dev/sdb: /dev/nvme0n1p2 ceph3:/dev/sdc:/dev/nvme0n1p3</span></span><br></pre></td></tr></table></figure>
+<p>所有3台机器设置完后，运行ceph -s，可以看到24个osd节点已经加入。<br>设置存储池pg_num和pgp_num的值</p>
+<p>在/etc/ceph/ceph.conf文件中，设置pg_num和pgp_num的值，如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[global]</span><br><span class="line">osd_pool_default_pg_num = 64</span><br><span class="line">osd_pool_default_pgp_num = 64</span><br></pre></td></tr></table></figure>
+<p>（注：pg_num和pgp_num数量可随不用应用场景进行调整，具体方法可见对象网关rgw配置）</p>
+</li>
+</ul>
+</li>
+<li><p>Ceph的网络配置</p>
+<blockquote>
+<p>Ceph的网络配置使用两个物理隔离的网络，分别作为Public Network（公共网络，即客户端访问网络）和Cluster Network（集群网络，即节点之间的网络）。在/etc/ceph/ceph.conf文件中，追加public_network信息如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[global]</span><br><span class="line">public network = 10.0.0.0/24</span><br><span class="line">cluster network = 192.168.0/24</span><br></pre></td></tr></table></figure>
+</blockquote>
+</li>
+</ul>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color1">技术文档  ceph</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2018/07/30/ceph/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-test" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -171,7 +278,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2018/07/26/test/">ceph的部署</a>
+      <a class="article-title" href="/2018/07/26/test/">ceph的部署（上）</a>
     </h1>
   
 
@@ -480,7 +587,7 @@
   <div class="outer">
     <div id="footer-info">
     	<div class="footer-left">
-    		&copy; 2018 牧牛男孩
+    		&copy; 2019 牧牛男孩
     	</div>
       	<div class="footer-right">
       		<a href="http://hexo.io/" target="_blank">Hexo</a>  Theme <a href="https://github.com/litten/hexo-theme-yilia" target="_blank">Yilia</a> by Litten
@@ -563,15 +670,15 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
           <ul class="article-tag-list" q-show="showTags">
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color3">第一条blog</a>
-              </li>
-             
-              <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color1">bash linux</a>
               </li>
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color1">技术文档  ceph</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">第一条blog</a>
               </li>
             
             <div class="clearfix"></div>
