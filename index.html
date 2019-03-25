@@ -164,6 +164,90 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="the-github" class="article article-type-the  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/03/25/github/">Keeping The network speeding of Github faster in China</a>
+    </h1>
+  
+
+        
+        <a href="/2019/03/25/github/" class="archive-article-date">
+  	<time datetime="2019-03-25T03:27:49.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-25</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="The-Issue-of-Net-Speeding-of-Github"><a href="#The-Issue-of-Net-Speeding-of-Github" class="headerlink" title="The Issue of Net Speeding of Github"></a>The Issue of Net Speeding of Github</h3><blockquote>
+<p>Alwaysly, when you browse the code of interesting on the <font color="#E23000"> Github </font>, you may encounter the problem like this. Cannot download the code what you want to capture.<br>It just results in the net speeding slow beyond imagination. How to solve it?<br>Firstly, Changing the file named 192.30.xx.xx and 151.101.xx.xx in your PC or workenvironment. The path of <font color="#E23000"> hosts </font> is in <font color="#E23000"> C:\Windows\System32\drivers\etc\hosts </font>.<br>Finding the IP of <a href="https://github.com" target="_blank" rel="noopener">https://github.com</a> and <a href="https://github.global.ssl.fastly.net" target="_blank" rel="noopener">https://github.global.ssl.fastly.net</a> in <a href="https://www.ipaddress.com/" target="_blank" rel="noopener">https://www.ipaddress.com/</a>. Such as 192.30.xx.xx and 151.101.xx.xx.<br>Vim the <font color="#E23000"> hosts </font> file as:</p>
+</blockquote>
+   <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">github.com 192.30.xx.xx</span><br><span class="line">github.global.ssl.fastly.net 151.101.xx.xx</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Siving the file named hosts, and run the command as follow:</p>
+</blockquote>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ipconfig /flushdns</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Finishing the updating of flushdns, the net speeding could be batter than before.</p>
+</blockquote>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">Github</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/03/25/github/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-TheThinkOfWork" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -1163,7 +1247,15 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
           <ul class="article-tag-list" q-show="showTags">
              
               <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color1">bash linux</a>
+              </li>
+             
+              <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">感悟</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color5">技术文档</a>
               </li>
              
               <li class="article-tag-list-item">
@@ -1171,15 +1263,11 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
               </li>
              
               <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color1">bash linux</a>
+                <a href="javascript:void(0)" class="js-tag color2">Github</a>
               </li>
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color3">随笔</a>
-              </li>
-             
-              <li class="article-tag-list-item">
-                <a href="javascript:void(0)" class="js-tag color5">技术文档</a>
               </li>
             
             <div class="clearfix"></div>
